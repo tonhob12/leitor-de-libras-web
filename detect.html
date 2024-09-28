@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hand Detection with TensorFlow.js</title>
+  <style>
+    #video {
+      width: 640px;
+      height: 480px;
+      border: 2px solid black;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #canvas {
+      width: 640px;
+      height: 480px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none; /* Desativa interação com o canvas */
+    }
+  </style>
+</head>
+<body>
+  <h1>Detecção de Mão com TensorFlow.js</h1>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <!-- Carrega TensorFlow.js e o modelo handpose -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let model;
+
+    async function setupCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          resolve();
+        };
+      });
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+
+    async function loadModel() {
+      model = await handpose.load();
+      console.log("Modelo carregado.");
+    }
+
+    async function detectHands() {
+      const predictions = await model.estimateHands(video);
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa o canvas
+
+      if (predictions.length > 0) {
+        predictions.forEach(prediction => {
+          drawHand(prediction.landmarks);
+        });
+      }
+
+      requestAnimationFrame(detectHands); // Continuar a detecção
+    }
+
+    function drawHand(landmarks) {
+      const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4],
+        [0, 5], [5, 6], [6, 7], [7, 8],
+        [5, 9], [9, 10], [10, 11], [11, 12],
+        [9, 13], [13, 14], [14, 15], [15, 16],
+        [13, 17], [17, 18], [18, 19], [19, 20]
+      ];
+
+      // Desenha as linhas entre os pontos
+      ctx.strokeStyle = '#00FF00'; // Cor das linhas
+      ctx.lineWidth = 2;
+
+      connections.forEach(([start, end]) => {
+        const [startX, startY] = landmarks[start];
+        const [endX, endY] = landmarks[end];
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      });
+
+      // Desenha os pontos e numera eles
+      ctx.fillStyle = '#FF0000'; // Cor dos pontos
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+
+      landmarks.forEach(([x, y], index) => {
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Desenha o número do ponto
+        ctx.fillStyle = '#000000'; // Cor do texto
+        ctx.fillText(index, x, y - 10); // Ajusta a posição do texto
+      });
+    }
+
+    async function main() {
+      await setupCamera();
+      await loadModel();
+      detectHands();
+    }
+
+    main();
+  </script>
+</body>
+</html>

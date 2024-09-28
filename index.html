@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitor de Libras</title>
+  <style>
+    body {
+      background-color: rgba(0, 241, 0, 0.943);
+    }
+    #video {
+      width: 640px;
+      height: 480px;
+      border: 2px solid black;
+    }
+    #status {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Leitor de libras - Concios Company</h1>
+  <video id="video" autoplay></video>
+  <div id="status">Detectando...</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+  <script>
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+
+    // Carrega o modelo handpose
+    let model;
+    async function loadModel() {
+      model = await handpose.load();
+      console.log('Modelo carregado');
+      detectHands();
+    }
+
+    // Acessa a webcam
+    async function setupCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+      video.srcObject = stream;
+    }
+
+    setupCamera();
+
+    // Função principal que detecta landmarks das mãos
+    async function detectHands() {
+      const predictions = await model.estimateHands(video);
+
+      if (predictions.length > 0) {
+        const pontos = predictions[0].landmarks; // Captura os landmarks
+        const letra = detectarLetra(pontos); // Chama a função para detectar a letra
+        status.textContent = letra ? `Letra detectada: ${letra}` : 'Nenhuma letra detectada';
+      }
+
+      requestAnimationFrame(detectHands); // Chama a função continuamente
+    }
+
+    // Função para detectar letras com base nos pontos
+    function detectarLetra(pontos) {
+      if (pontos.length > 20) {
+        // Lógica para a letra A
+        if (
+          pontos[8][1] > pontos[5][1] &&
+          pontos[12][1] > pontos[9][1] &&
+          pontos[16][1] > pontos[13][1] &&
+          pontos[20][1] > pontos[17][1] &&
+          pontos[4][1] < pontos[5][1]
+        ) {
+          return 'A';
+        }
+
+        // Lógica para a letra B
+        if (
+          pontos[8][1] < pontos[7][1] &&
+          pontos[12][1] < pontos[11][1] &&
+          pontos[16][1] < pontos[15][1] &&
+          pontos[20][1] < pontos[19][1] &&
+          pontos[4][0] < pontos[1][0]
+        ) {
+          return 'B';
+        }
+
+        // Lógica para a letra C
+        if (
+          pontos[8][2] > pontos[12][2] &&
+          pontos[12][2] > pontos[16][2] &&
+          pontos[16][2] > pontos[20][2] &&
+          pontos[20][2] < pontos[16][2] &&
+          pontos[20][2] < pontos[12][2] 
+        ) {
+          return 'C';
+        }
+
+        // Lógica para a letra D
+        if (
+          pontos[8][1] < pontos[10][1] &&
+          pontos[12][1] > pontos[10][1] &&
+          pontos[16][1] > pontos[14][1] &&
+          pontos[20][1] > pontos[18][1] &&
+          pontos[4][1] > pontos[15][1]
+
+        ) {
+          return 'D';
+        }
+
+        // Lógica para a letra E
+        if (
+          pontos[8][1] < pontos[5][1] &&
+          pontos[20][1] > pontos[19][1] &&
+          pontos[16][1] > pontos[15][1] &&
+          pontos[12][1] > pontos[11][1] &&
+          pontos[8][1] > pontos[7][1] &&
+          pontos[8][2] < pontos[9][2] &&
+          pontos[16][2] < pontos[13][2] &&
+          pontos[20][2] < pontos[17][2] &&
+          pontos[4][1] > pontos[5][1] &&
+          pontos[4][2] < pontos[2][2]
+        ) {
+          return 'E';
+        }
+      
+      }
+      return '';
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
